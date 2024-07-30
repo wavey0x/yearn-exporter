@@ -694,7 +694,7 @@ def dhms_from_seconds(seconds):
 	return (days, hours, minutes)
 
 def get_contract(address):
-    address = web3.toChecksumAddress(address)
+    address = web3.to_checksum_address(address)
     try:
         return contract(address)
     except:

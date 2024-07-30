@@ -130,7 +130,8 @@ dsn = f'postgresql://{pguser}:{pgpassword}@{pghost}:5432/{pgdatabase}'
 user = os.environ.get('POSTGRES_USER')
 password = os.environ.get('POSTGRES_PASS')
 host = os.environ.get('POSTGRES_HOST')
-dsn = f'postgresql://{user}:{password}@{host}:5432/reports'
+db = os.environ.get('POSTGRES_DB')
+dsn = f'postgresql://{user}:{password}@{host}:5432/{db}'
 engine = create_engine(dsn, echo=False)
 
 # SQLModel.metadata.drop_all(engine)
