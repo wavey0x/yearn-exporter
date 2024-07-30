@@ -1,4 +1,3 @@
-from lib2to3.pgen2 import token
 import logging
 import time, os, requests,json
 import telebot
