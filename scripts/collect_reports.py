@@ -227,7 +227,6 @@ def handle_event(event, multi_harvest):
             print(f"skipping: not endorsed yet. txn hash {txn_hash}. chain id {chain.id} sync {event.block_number} / {chain.height}.")
             return
 
-    print(txn_hash)
     tx = web3.eth.get_transaction_receipt(txn_hash)
     gas_price = web3.eth.get_transaction(txn_hash).gasPrice
     ts = chain[event.block_number].timestamp
@@ -254,11 +253,16 @@ def handle_event(event, multi_harvest):
         t.txn_from = tx["from"]
         t.txn_gas_used = tx.gasUsed
         t.txn_gas_price = gas_price / 1e9 # Use gwei
-        t.eth_price_at_block = get_price(constants.weth, t.block)
+        eth_price = 0
+        try:
+            eth_price = get_price(constants.weth, t.block)
+        except:
+            pass
+        t.eth_price_at_block = eth_price
         t.call_cost_eth = gas_price * tx.gasUsed / 1e18
         t.call_cost_usd = float(t.eth_price_at_block) * float(t.call_cost_eth)
         if chain.id == 1:
-            t.kp3r_price_at_block = get_price(CHAIN_VALUES[chain.id]["KEEPER_TOKEN"], t.block)
+            t.kp3r_price_at_block = 0 # get_price(CHAIN_VALUES[chain.id]["KEEPER_TOKEN"], t.block)
             t.kp3r_paid = get_keeper_payment(tx) / 1e18
             t.kp3r_paid_usd = float(t.kp3r_paid) * float(t.kp3r_price_at_block)
             t.keeper_called = t.kp3r_paid > 0
@@ -275,7 +279,6 @@ def handle_event(event, multi_harvest):
         txn_record_exists = True
     r.block = event.block_number
     r.txn_hash = txn_hash
-    print("ETHERSCAN_TOKEN: ", os.environ.get('ETHERSCAN_TOKEN'))
     strategy = contract(r.strategy_address)
     
     r.vault_api = vault.apiVersion()
@@ -284,17 +287,19 @@ def handle_event(event, multi_harvest):
     r.token_symbol = contract(strategy.want()).symbol()
     r.want_token = strategy.want()
     r.want_price_at_block = 0
-    print(f'Want token = {r.want_token}')
+    print(f'Want token ===> {r.want_token}')
     if r.vault_address == '0x9E0E0AF468FbD041Cab7883c5eEf16D1A99a47C3':
         r.want_price_at_block = 1
-    if r.want_token in [
+    if r.want_token not in [
         '0xC4C319E2D4d66CcA4464C0c2B32c9Bd23ebe784e', # rekt alETH
         '0x9848482da3Ee3076165ce6497eDA906E66bB85C5', # rekt jPegd pETH
         '0xEd4064f376cB8d68F770FB1Ff088a3d0F3FF5c4d', # rekt crvETH
     ]:
-        r.want_price_at_block = 0
-    else:
-        r.want_price_at_block = get_price(r.want_token, r.block)
+        try:
+            r.want_price_at_block = get_price(r.want_token, r.block)
+        except Exception as e:
+            # Print the error message
+            print(f"An error occurred: {e}")
     
     r.want_gain_usd = r.gain * float(r.want_price_at_block)
     r.vault_name = vault.name()
@@ -407,7 +412,7 @@ def get_keeper_payment(tx):
 
 def compute_apr(report, previous_report):
     SECONDS_IN_A_YEAR = 31557600
-    seconds_between_reports = report.timestamp - previous_report.timestamp
+    seconds_between_reports = report.timestamp - int(previous_report.timestamp)
     pre_fee_apr = 0
     post_fee_apr = 0
 
@@ -510,6 +515,8 @@ def normalize_event_values(vals, decimals):
     if len(vals) == 8:
         strategy_address, gain, loss, total_gain, total_loss, total_debt, debt_added, debt_ratio = vals
         debt_paid = 0
+        if debt_ratio > 10_000:
+            debt_ratio = 0
     if len(vals) == 9:
         strategy_address, gain, loss, debt_paid, total_gain, total_loss, total_debt, debt_added, debt_ratio = vals
     return (
