@@ -262,8 +262,8 @@ def handle_event(event, multi_harvest):
             return
 
     print(txn_hash)
-    tx = web3.eth.getTransactionReceipt(txn_hash)
-    gas_price = web3.eth.getTransaction(txn_hash).gasPrice
+    tx = web3.eth.get_transaction_receipt(txn_hash)
+    gas_price = web3.eth.get_transaction(txn_hash).gasPrice
     ts = chain[event.block_number].timestamp
     dt = datetime.utcfromtimestamp(ts).strftime("%m/%d/%Y, %H:%M:%S")
     r = Reports()
@@ -349,7 +349,7 @@ def handle_event(event, multi_harvest):
         treasury = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
         token_abi = Contract(crv).abi
         crv_token = web3.eth.contract(crv, abi=token_abi)
-        decoded_events = crv_token.events.Transfer().processReceipt(tx)
+        decoded_events = crv_token.events.Transfer().process_receipt(tx)
         r.keep_crv = 0
         for tfr in decoded_events:
             _from, _to, _val = tfr.args.values()
@@ -360,7 +360,7 @@ def handle_event(event, multi_harvest):
         
         if r.keep_crv > 0:
             yvecrv_token = web3.eth.contract(yvecrv, abi=token_abi)
-            decoded_events = yvecrv_token.events.Transfer().processReceipt(tx)
+            decoded_events = yvecrv_token.events.Transfer().process_receipt(tx)
             try:
                 r.keep_crv_percent = strategy.keepCRV()
             except:
@@ -429,7 +429,7 @@ def get_keeper_payment(tx):
     token = contract(kp3r_token)
     denominator = 10 ** token.decimals()
     token = web3.eth.contract(str(kp3r_token), abi=token.abi)
-    decoded_events = token.events.Transfer().processReceipt(tx)
+    decoded_events = token.events.Transfer().process_receipt(tx)
     amount = 0
     for e in decoded_events:
         if e.address == kp3r_token:
@@ -469,7 +469,7 @@ def parse_fees(tx, vault_address, strategy_address, decimals, gain, vault_versio
     treasury = CHAIN_VALUES[chain.id]["YEARN_TREASURY"]
     token = contract(vault_address)
     token = web3.eth.contract(str(vault_address), abi=token.abi)
-    transfers = token.events.Transfer().processReceipt(tx)
+    transfers = token.events.Transfer().process_receipt(tx)
 
     amount = 0
     gov_fee_in_underlying = 0
