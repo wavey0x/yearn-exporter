@@ -184,67 +184,33 @@ if chain.id == 1:
         vault_v030.events.StrategyReported().abi, web3.codec, {}
     )
 
-def main(dynamically_find_multi_harvest=False):
-    if chain.id == 1:
-        ycrv = interface.YCRV('0xFCc5c47bE19d06BF83eB04298b026F81069ff65b')
-        y = Contract.from_abi('','0xFCc5c47bE19d06BF83eB04298b026F81069ff65b',interface.YCRV.abi)
-    print(f"dynamic multi_harvest detection is enabled: {dynamically_find_multi_harvest}")
+def main():
     interval_seconds = 25
 
-    last_reported_block, last_reported_block030 = last_harvest_block()
-    # last_reported_block = 16482431
-    # last_reported_block030 = 16482431
-    print("latest block (v0.3.1+ API)",last_reported_block)
-    print("blocks behind (v0.3.1+ API)", chain.height - last_reported_block)
-    if chain.id == 1:
-        print("latest block (v0.3.0 API)",last_reported_block030)
-        print("blocks behind (v0.3.0 API)", chain.height - last_reported_block030)
-    event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block + 1})
-    if chain.id == 1:
-        event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030 + 1})
+    while True: # Keep this as a long-running script # <--- disabled this since ypm issues
+        last_reported_block, last_reported_block030 = last_harvest_block()
+        # last_reported_block = 16482431
+        # last_reported_block030 = 16482431
+        print("latest block (v0.3.1+ API)",last_reported_block)
+        print("blocks behind (v0.3.1+ API)", chain.height - last_reported_block)
+        if chain.id == 1:
+            print("latest block (v0.3.0 API)",last_reported_block030)
+            print("blocks behind (v0.3.0 API)", chain.height - last_reported_block030)
+        event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block + 1, "toBlock": last_reported_block030 + 200_000})
+        if chain.id == 1:
+            event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030 + 1, "toBlock": last_reported_block030 + 200_000})
     
-    # while True: # Keep this as a long-running script # <--- disabled this since ypm issues
-    events_to_process = []
-    transaction_hashes = []
-    if dynamically_find_multi_harvest:
-        # The code below is used to populate the "multi_harvest" property #
-        for strategy_report_event in decode_logs(event_filter.get_new_entries()):
-            e = Event(False, strategy_report_event, strategy_report_event.transaction_hash.hex())
-            if e.txn_hash in transaction_hashes:
-                e.multi_harvest = True
-                for i in range(0, len(events_to_process)):
-                        if e.txn_hash == events_to_process[i].txn_hash:
-                            events_to_process[i].multi_harvest = True
-            else:
-                transaction_hashes.append(strategy_report_event.transaction_hash.hex())
-            events_to_process.append(e)
-            
-        if chain.id == 1: # No old vaults deployed anywhere other than mainnet
-            for strategy_report_event in decode_logs(event_filter_v030.get_new_entries()):
-                e = Event(True, strategy_report_event, strategy_report_event.transaction_hash.hex())
-                if e.txn_hash in transaction_hashes:
-                    e.multi_harvest = True
-                    for i in range(0, len(events_to_process)):
-                        if e.txn_hash == events_to_process[i].txn_hash:
-                            events_to_process[i].multi_harvest = True
-                else:
-                    transaction_hashes.append(strategy_report_event.transaction_hash.hex())
-                events_to_process.append(e)
-
-        for e in events_to_process:
-            handle_event(e.event, e.multi_harvest)
-        # time.sleep(interval_seconds)
-    else:
-        for strategy_report_event in decode_logs(event_filter.get_new_entries()):
+        for strategy_report_event in decode_logs(event_filter.get_all_entries()):
             e = Event(False, strategy_report_event, strategy_report_event.transaction_hash.hex())
             handle_event(e.event, e.multi_harvest)
             
         if chain.id == 1: # Old vault API exists only on Ethereum mainnet
-            for strategy_report_event in decode_logs(event_filter_v030.get_new_entries()):
+            for strategy_report_event in decode_logs(event_filter_v030.get_all_entries()):
                 e = Event(True, strategy_report_event, strategy_report_event.transaction_hash.hex())
                 handle_event(e.event, e.multi_harvest)
 
-        # time.sleep(interval_seconds)
+        print(f'Polling...')
+        time.sleep(interval_seconds)
 
 def handle_event(event, multi_harvest):
     endorsed_vaults = list(contract(CHAIN_VALUES[chain.id]["REGISTRY_HELPER_ADDRESS"]).getVaults())
