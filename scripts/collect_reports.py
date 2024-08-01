@@ -196,16 +196,16 @@ def main():
         if chain.id == 1:
             print("latest block (v0.3.0 API)",last_reported_block030)
             print("blocks behind (v0.3.0 API)", chain.height - last_reported_block030)
-        event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block + 1, "toBlock": last_reported_block030 + 200_000})
+        event_filter = web3.eth.filter({'topics': topics, "fromBlock": last_reported_block + 1})
         if chain.id == 1:
-            event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030 + 1, "toBlock": last_reported_block030 + 200_000})
+            event_filter_v030 = web3.eth.filter({'topics': topics_v030, "fromBlock": last_reported_block030 + 1})
     
-        for strategy_report_event in decode_logs(event_filter.get_all_entries()):
+        for strategy_report_event in decode_logs(event_filter.get_new_entries()):
             e = Event(False, strategy_report_event, strategy_report_event.transaction_hash.hex())
             handle_event(e.event, e.multi_harvest)
             
         if chain.id == 1: # Old vault API exists only on Ethereum mainnet
-            for strategy_report_event in decode_logs(event_filter_v030.get_all_entries()):
+            for strategy_report_event in decode_logs(event_filter_v030.get_new_entries()):
                 e = Event(True, strategy_report_event, strategy_report_event.transaction_hash.hex())
                 handle_event(e.event, e.multi_harvest)
 
