@@ -528,7 +528,7 @@ def normalize_event_values(vals, decimals):
         total_loss/denominator, 
         total_debt/denominator, 
         debt_added/denominator, 
-        debt_ratio
+        int(debt_ratio)
     )
 
 def prepare_alerts(r, t):
